@@ -77,7 +77,7 @@ int main() {
     // The 2 signifies a websocket event
     
     string sdata = string(data).substr(0, length);
-    std::cout << "DATA = " << sdata << "\n";
+    //std::cout << "DATA = " << sdata << "\n";
     if (sdata.size() > 2 && sdata[0] == '4' && sdata[1] == '2') {
       string s = hasData(sdata);
       if (s != "") {
@@ -94,7 +94,8 @@ int main() {
           double delta = j[1]["steering_angle"];
           double a = j[1]["throttle"];
 
-          v = v * 0.44704;
+          //converting from mph to mps
+          //v = v * 0.44704;
           
           int ptsize = j[1]["ptsx"].size();
           
@@ -102,10 +103,11 @@ int main() {
           Eigen::VectorXd ptsy(ptsize);
           
           for (int i=0; i<j[1]["ptsx"].size(); i++) {
-            double gx = j[1]["ptsx"][i];
-            double gy = j[1]["ptsy"][i];
-            ptsx[i] = ((gx - px)*cos(psi) + (gy - py)*sin(psi));
-            ptsy[i] = ((gy - py)*cos(psi) - (gx - px)*sin(psi));
+            double gx = (j[1]["ptsx"][i]);
+            double gy = (j[1]["ptsy"][i]);
+            
+            ptsx[i] = (gx - px)*cos(0-psi) - (gy - py)*sin(0-psi);
+            ptsy[i] = (gx - px)*sin(0-psi) + (gy - py)*cos(0-psi);
           };
           
           double steer_value;
@@ -121,20 +123,20 @@ int main() {
           
           coeffs = polyfit(ptsx, ptsy, 3);
           
-          double cte = polyeval(coeffs, px) - py;
+          double cte = polyeval(coeffs, 0);
           // coeffs[0] + coeffs[1]*px + coeffs[2]*(px * px) + coeffs[3]*(px * px * px)
           
-          double epsi = psi - atan(coeffs[1] + coeffs[2]*px*2 + 3*coeffs[2]*(px * px));
+          double epsi = -atan(coeffs[1]);
           
           Eigen::VectorXd state(6);
-          state[0] = px;
-          state[1] = py;
-          state[2] = psi;
+          state[0] = 0;
+          state[1] = 0;
+          state[2] = 0;
           state[3] = v;
           state[4] = cte;
           state[5] = epsi;
           
-          std::cout << state << "\n";
+          //std::cout << state << "\n";
           
           auto result = mpc.Solve(state, coeffs);
           
@@ -153,32 +155,34 @@ int main() {
           //Display the waypoints/reference line (yellow)
           vector<double> next_x_vals;
           vector<double> next_y_vals;
-          /*
-          for (int i=0; i<6; i++) {
-            double ax = result[2 + 2*i];
-            double ay = result[3 + 2*i];
-            mpc_x_vals.push_back(ax);
-            mpc_y_vals.push_back(ay);
+
+          double d = 2.5;
+          int num = 25;
+          for (int i=0; i<num; i++) {
+            next_x_vals.push_back(d*i);
+            next_y_vals.push_back(polyeval(coeffs, d*i));
+          };
+          
+          for (int i=2; i<result.size(); i++) {
+            if (i%2 == 0) {
+              mpc_x_vals.push_back(result[i]);
+            }
+            else {
+              mpc_y_vals.push_back(result[i]);
+            }
           }
           
-          for (int i=0; i<6; i++) {
-            double ax = result[2 + 2*i];
-            double ay = result[3 + 2*i];
-            next_x_vals.push_back(ax);
-            next_y_vals.push_back(polyeval(coeffs, ay));
-          }
-          */
-          msgJson["mpc_x"] = j[1]["ptsx"];
-          msgJson["mpc_y"] = j[1]["ptsy"];
+          msgJson["mpc_x"] = mpc_x_vals;
+          msgJson["mpc_y"] = mpc_y_vals;
           
           msgJson["next_x"] = next_x_vals;
           msgJson["next_y"] = next_y_vals;
           
           //std::cout << "yip9 \n";
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
-          std::cout << msg << std::endl;
-          std::cout << result[0] << std::endl;
-          std::cout << result[1] << std::endl;
+          //std::cout << msg << std::endl;
+          std::cout << "Angle: " << result[0] << std::endl;
+          std::cout << "Acc: " << result[1] << "\n\n";
           
           // Latency
           // The purpose is to mimic real driving conditions where
