@@ -1,6 +1,8 @@
 # Model Predictive Control
 This project involves two things. Fisrt, we build a mathematical model of how the car behaves. Then, the program makes actuator decisions (throttle and steering) to make sure it drives along a stable path in a non-alcoholic way!
 
+[![Visualization](youtube.png)](https://youtu.be/dusIhbBYyvY)
+
 ## How to run the project
 Check dependencies and instructions here: [MPC Project](https://github.com/udacity/CarND-MPC-Project). I use the same folder organization so you can follow the instructions as they are.
 
