@@ -6,8 +6,8 @@
 using CppAD::AD;
 
 // TODO: Set the timestep length and duration
-size_t N = 25;
-double dt = 0.1;
+size_t N = 15;
+double dt = 0.2;
 
 // This value assumes the model presented in the classroom is used.
 //
@@ -20,7 +20,7 @@ double dt = 0.1;
 //
 // This is the length from front to CoG that has a similar radius.
 const double Lf = 2.67;
-double ref_v = 60;
+double ref_v = 50;
 
 size_t x_start = 0;
 size_t y_start = x_start + N;
@@ -30,6 +30,7 @@ size_t cte_start = v_start + N;
 size_t epsi_start = cte_start + N;
 size_t delta_start = epsi_start + N;
 size_t a_start = delta_start + N - 1;
+
 
 class FG_eval {
  public:
@@ -54,18 +55,18 @@ class FG_eval {
     fg[1 + epsi_start] = vars[epsi_start];
     
     for (int i=0; i < N; i++) {
-      fg[0] += CppAD::pow(vars[cte_start + i], 2);
-      fg[0] += CppAD::pow(vars[epsi_start + i], 2);
+      fg[0] += 50 * CppAD::pow(vars[cte_start + i], 2);
+      fg[0] += 400 * CppAD::pow(vars[epsi_start + i], 2);
       fg[0] += CppAD::pow(vars[v_start + i]-ref_v, 2);
     };
     
     for (int i=0; i< N-1; i++) {
-      fg[0] += 100*CppAD::pow(vars[delta_start + i], 2);
+      fg[0] += CppAD::pow(vars[delta_start + i], 2);
       fg[0] += CppAD::pow(vars[a_start + i], 2);
     };
 
     for (int i=0; i< N-2; i++) {
-      fg[0] += 1000 * CppAD::pow(vars[delta_start + i + 1] - vars[delta_start + i], 2);
+      fg[0] += 100 * CppAD::pow(vars[delta_start + i + 1] - vars[delta_start + i], 2);
       fg[0] += CppAD::pow(vars[a_start + i + 1] - vars[a_start + i], 2);
     };
     
@@ -92,6 +93,9 @@ class FG_eval {
       AD<double> epsi0 = vars[epsi_start + i];
       
       AD<double> f0 = coeffs[0] + coeffs[1]*x0 + coeffs[2]*(x0 * x0) + coeffs[3]*(x0 * x0 * x0);
+      
+      //AD<double> f0 = polyeval(coeffs, x0);
+      
       
       AD<double> psi_des = CppAD::atan(coeffs[1]+ 2*coeffs[2]*x0 + 3*coeffs[3]*(x0*x0));
       
@@ -233,7 +237,7 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   result.push_back(solution.x[delta_start]);
   result.push_back(solution.x[a_start]);
   
-  for (int i=0; i<20; i++) {
+  for (int i=0; i<10; i++) {
     result.push_back(solution.x[x_start + i]);
     result.push_back(solution.x[y_start + i]);
   }

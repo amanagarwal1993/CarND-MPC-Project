@@ -97,17 +97,21 @@ int main() {
           //converting from mph to mps
           //v = v * 0.44704;
           
+          
           int ptsize = j[1]["ptsx"].size();
           
-          Eigen::VectorXd ptsx(ptsize);
-          Eigen::VectorXd ptsy(ptsize);
+          vector<double> ptsx = j[1]["ptsx"];
+          vector<double> ptsy = j[1]["ptsy"];
+          
+          Eigen::VectorXd ptsx_car(ptsize);
+          Eigen::VectorXd ptsy_car(ptsize);
           
           for (int i=0; i<j[1]["ptsx"].size(); i++) {
-            double gx = (j[1]["ptsx"][i]);
-            double gy = (j[1]["ptsy"][i]);
+            double x = ptsx[i] - px;
+            double y = ptsy[i] - py;
             
-            ptsx[i] = (gx - px)*cos(0-psi) - (gy - py)*sin(0-psi);
-            ptsy[i] = (gx - px)*sin(0-psi) + (gy - py)*cos(0-psi);
+            ptsx_car[i] = x * cos(-psi) - y * sin(-psi);
+            ptsy_car[i] = x * sin(-psi) + y * cos(-psi);
           };
           
           double steer_value;
@@ -121,7 +125,7 @@ int main() {
           
           Eigen::VectorXd coeffs;
           
-          coeffs = polyfit(ptsx, ptsy, 3);
+          coeffs = polyfit(ptsx_car, ptsy_car, 3);
           
           double cte = polyeval(coeffs, 0);
           // coeffs[0] + coeffs[1]*px + coeffs[2]*(px * px) + coeffs[3]*(px * px * px)
