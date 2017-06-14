@@ -2,10 +2,8 @@
 #include <cppad/cppad.hpp>
 #include <cppad/ipopt/solve.hpp>
 #include "Eigen-3.3/Eigen/Core"
-//double deg2rad(double x) { return x * M_PI / 180; }
 using CppAD::AD;
 
-// TODO: Set the timestep length and duration
 size_t N = 15;
 double dt = 0.2;
 
@@ -40,10 +38,6 @@ class FG_eval {
 
   typedef CPPAD_TESTVECTOR(AD<double>) ADvector;
   void operator()(ADvector& fg, const ADvector& vars) {
-    // TODO: implement MPC
-    // fg a vector of constraints, x is a vector of constraints.
-    // NOTE: You'll probably go back and forth between this function and
-    // the Solver function below.
     
     fg[0] = 0;
 
@@ -93,9 +87,6 @@ class FG_eval {
       AD<double> epsi0 = vars[epsi_start + i];
       
       AD<double> f0 = coeffs[0] + coeffs[1]*x0 + coeffs[2]*(x0 * x0) + coeffs[3]*(x0 * x0 * x0);
-      
-      //AD<double> f0 = polyeval(coeffs, x0);
-      
       
       AD<double> psi_des = CppAD::atan(coeffs[1]+ 2*coeffs[2]*x0 + 3*coeffs[3]*(x0*x0));
       
@@ -227,11 +218,6 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   // Cost
   auto cost = solution.obj_value;
   std::cout << "Cost " << cost << std::endl;
-  // TODO: Return the first actuator values. The variables can be accessed with
-  // `solution.x[i]`.
-  //
-  // {...} is shorthand for creating a vector, so auto x1 = {1.0,2.0}
-  // creates a 2 element double vector.
   
   vector<double> result;
   result.push_back(solution.x[delta_start]);

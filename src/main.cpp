@@ -94,10 +94,7 @@ int main() {
           double delta = j[1]["steering_angle"];
           double a = j[1]["throttle"];
 
-          //converting from mph to mps
-          //v = v * 0.44704;
-          
-          
+          // Number of waypoints in each dimension
           int ptsize = j[1]["ptsx"].size();
           
           vector<double> ptsx = j[1]["ptsx"];
@@ -106,6 +103,10 @@ int main() {
           Eigen::VectorXd ptsx_car(ptsize);
           Eigen::VectorXd ptsy_car(ptsize);
           
+          /* 
+             We convert the waypoints from global coordinates to car coordinates.
+             This involves shifting the value of (x,y) and rotating the angle psi
+          */
           for (int i=0; i<j[1]["ptsx"].size(); i++) {
             double x = ptsx[i] - px;
             double y = ptsy[i] - py;
@@ -117,19 +118,14 @@ int main() {
           double steer_value;
           double throttle_value;
           
-          /* Steps to follow:
-                1. Get a reference trajectory which is to be followed for the next few points.
-                2. Use constraints set actuations such that reference trajectory is followed.
-           
-                */
-          
           Eigen::VectorXd coeffs;
           
+          // Using the polyfit function to fit a polynomial to our waypoints
           coeffs = polyfit(ptsx_car, ptsy_car, 3);
           
+          // Current cte will simply be the current y-position of the vehicle in car coordinates
           double cte = polyeval(coeffs, 0);
-          // coeffs[0] + coeffs[1]*px + coeffs[2]*(px * px) + coeffs[3]*(px * px * px)
-          
+          // Current epsi will be an inverse tangent of dy/dx
           double epsi = -atan(coeffs[1]);
           
           Eigen::VectorXd state(6);
@@ -140,16 +136,14 @@ int main() {
           state[4] = cte;
           state[5] = epsi;
           
-          //std::cout << state << "\n";
-          
+          // Get the actuators and predicted trajectory from MPC solver
           auto result = mpc.Solve(state, coeffs);
           
           steer_value = result[0];
           throttle_value = result[1];
 
           json msgJson;
-          // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.
-          // Otherwise the values will be in between [-deg2rad(25), deg2rad(25] instead of [-1, 1].
+          
           msgJson["steering_angle"] = steer_value;
           msgJson["throttle"] = throttle_value;
 
@@ -182,9 +176,7 @@ int main() {
           msgJson["next_x"] = next_x_vals;
           msgJson["next_y"] = next_y_vals;
           
-          //std::cout << "yip9 \n";
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
-          //std::cout << msg << std::endl;
           std::cout << "Angle: " << result[0] << std::endl;
           std::cout << "Acc: " << result[1] << "\n\n";
           

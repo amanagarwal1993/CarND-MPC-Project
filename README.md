@@ -1,115 +1,53 @@
-# CarND-Controls-MPC
-Self-Driving Car Engineer Nanodegree Program
+# Model Predictive Control
+This project involves two things. Fisrt, we build a mathematical model of how the car behaves. Then, the program makes actuator decisions (throttle and steering) to make sure it drives along a stable path in a non-alcoholic way!
 
----
+## How to run the project
+Check dependencies and instructions here: [MPC Project](https://github.com/udacity/CarND-MPC-Project). I use the same folder organization so you can follow the instructions as they are.
 
-## Dependencies
+### The Model State
+First, here are the basic quantities we use to describe our car's movement. I think these are very intuitive, although we can go as much further as we want (adding the vehicle geometry, friction of tyres and what not):
+1. The car's position (x and y coordinates)
+2. The car's speed (v)
+3. The angle/orientation of the car (psi)
 
-* cmake >= 3.5
- * All OSes: [click here for installation instructions](https://cmake.org/install/)
-* make >= 4.1
-  * Linux: make is installed by default on most Linux distros
-  * Mac: [install Xcode command line tools to get make](https://developer.apple.com/xcode/features/)
-  * Windows: [Click here for installation instructions](http://gnuwin32.sourceforge.net/packages/make.htm)
-* gcc/g++ >= 5.4
-  * Linux: gcc / g++ is installed by default on most Linux distros
-  * Mac: same deal as make - [install Xcode command line tools]((https://developer.apple.com/xcode/features/)
-  * Windows: recommend using [MinGW](http://www.mingw.org/)
-* [uWebSockets](https://github.com/uWebSockets/uWebSockets)
-  * Run either `install-mac.sh` or `install-ubuntu.sh`.
-  * If you install from source, checkout to commit `e94b6e1`, i.e.
-    ```
-    git clone https://github.com/uWebSockets/uWebSockets 
-    cd uWebSockets
-    git checkout e94b6e1
-    ```
-    Some function signatures have changed in v0.14.x. See [this PR](https://github.com/udacity/CarND-MPC-Project/pull/3) for more details.
-* Fortran Compiler
-  * Mac: `brew install gcc` (might not be required)
-  * Linux: `sudo apt-get install gfortran`. Additionall you have also have to install gcc and g++, `sudo apt-get install gcc g++`. Look in [this Dockerfile](https://github.com/udacity/CarND-MPC-Quizzes/blob/master/Dockerfile) for more info.
-* [Ipopt](https://projects.coin-or.org/Ipopt)
-  * Mac: `brew install ipopt`
-  * Linux
-    * You will need a version of Ipopt 3.12.1 or higher. The version available through `apt-get` is 3.11.x. If you can get that version to work great but if not there's a script `install_ipopt.sh` that will install Ipopt. You just need to download the source from the Ipopt [releases page](https://www.coin-or.org/download/source/Ipopt/) or the [Github releases](https://github.com/coin-or/Ipopt/releases) page.
-    * Then call `install_ipopt.sh` with the source directory as the first argument, ex: `bash install_ipopt.sh Ipopt-3.12.1`. 
-  * Windows: TODO. If you can use the Linux subsystem and follow the Linux instructions.
-* [CppAD](https://www.coin-or.org/CppAD/)
-  * Mac: `brew install cppad`
-  * Linux `sudo apt-get install cppad` or equivalent.
-  * Windows: TODO. If you can use the Linux subsystem and follow the Linux instructions.
-* [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page). This is already part of the repo so you shouldn't have to worry about it.
-* Simulator. You can download these from the [releases tab](https://github.com/udacity/self-driving-car-sim/releases).
-* Not a dependency but read the [DATA.md](./DATA.md) for a description of the data sent back from the simulator.
+Now, we also have a calculated reference trajectory which we want our car to follow. This trajectory is a list of x,y coordinates. We turn these "waypoints" into a real trajectory by choosing a 3-degree polynomial that fits this set of coordinates. Once we have a trajectory, we now have two more quantities we can add to our car's model:
+1. The cross-track error, cte (how far the car is from where it's supposed to be)
+2. The error in orientation, epsi (how much the car is wrongly rotated compared to how it should be)
+
+Finally, we have the acceleration (a) and the steering angle (delta) which will be tweaked by our program to make sure that it follows the reference path!
+
+### Model Equations
+These equations describe how different quantities of the model relate to each other. This is basic high-school physics, so it's nothing fancy. However, the more advanced we make our model, the more complicated our equations can become.
+1. **future_position = current_position + (speed x time_difference)**
+_xf = xp + v*cos(psi)*dt_, and _yf = yp + v*sin(psi)*dt_
+
+2. **future_speed = current_speed + (acceleration * time_difference)**
+_vf = vp + a*dt_
+
+3. **future_angle = current_angle - (speed * steering * time_difference / vehicle_geometry_constant)**
+_psi_f = psi_p - (v * delta * dt / Lf)_
+
+4. **future_cte = current_cte + change in position**
+
+5. **future_epsi = current_epsi + change in orientation**
+
+### Timestep Length, Elapsed Duration and System Latency
+So we have a trajectory, but we need to now choose actuations such that our car follows the trajectory. A question arises:
+**For how long do you need to follow the trajectory? The situation on the road changes every few seconds, and with it the particular trajectory you have now will also change.**
+
+There can be a lot of experimentation in this regard, but it's best to only approximate the trajectory for less than 3-4 seconds. Beyond that, the unpredictability rises too much and the car may react to slowly to changes in the environment - for example, not decelerating fast enough at a curve in the road. This can be very dangerous.
+
+Moreover, there is also an inherent latency inside a car's systems. There's a time delay of a few milliseconds between when the throttle/steering input is decided and when the car actually makes that turn/acceleration. We also need to model this into our equations.
+
+After some experimentation, I chose the timestep dt to be 0.2 seconds - which is big enough to accomodate the system's latency described above. Therefore, the number of timesteps becomes 15 (3 seconds / 0.2 seconds). At any given time, we only try to look 3 seconds into the future.
+
+### Polynomial fitting
+(See main.cpp code)
+Since the waypoints are chosen in the global coordinate system of our map, they are not very useful for the car unless they are in the car's own coordinate system (i.e a system in which the car is centered at the origin). So we make that conversion.
+
+## License
+[GNU General Public License](http://choosealicense.com/licenses/gpl-3.0/#)
+_Just don't be a douche and don't plagiarize. Thanks! :)_
 
 
-## Basic Build Instructions
 
-
-1. Clone this repo.
-2. Make a build directory: `mkdir build && cd build`
-3. Compile: `cmake .. && make`
-4. Run it: `./mpc`.
-
-## Tips
-
-1. It's recommended to test the MPC on basic examples to see if your implementation behaves as desired. One possible example
-is the vehicle starting offset of a straight line (reference). If the MPC implementation is correct, after some number of timesteps
-(not too many) it should find and track the reference line.
-2. The `lake_track_waypoints.csv` file has the waypoints of the lake track. You could use this to fit polynomials and points and see of how well your model tracks curve. NOTE: This file might be not completely in sync with the simulator so your solution should NOT depend on it.
-3. For visualization this C++ [matplotlib wrapper](https://github.com/lava/matplotlib-cpp) could be helpful.
-
-## Editor Settings
-
-We've purposefully kept editor configuration files out of this repo in order to
-keep it as simple and environment agnostic as possible. However, we recommend
-using the following settings:
-
-* indent using spaces
-* set tab width to 2 spaces (keeps the matrices in source code aligned)
-
-## Code Style
-
-Please (do your best to) stick to [Google's C++ style guide](https://google.github.io/styleguide/cppguide.html).
-
-## Project Instructions and Rubric
-
-Note: regardless of the changes you make, your project must be buildable using
-cmake and make!
-
-More information is only accessible by people who are already enrolled in Term 2
-of CarND. If you are enrolled, see [the project page](https://classroom.udacity.com/nanodegrees/nd013/parts/40f38239-66b6-46ec-ae68-03afd8a601c8/modules/f1820894-8322-4bb3-81aa-b26b3c6dcbaf/lessons/b1ff3be0-c904-438e-aad3-2b5379f0e0c3/concepts/1a2255a0-e23c-44cf-8d41-39b8a3c8264a)
-for instructions and the project rubric.
-
-## Hints!
-
-* You don't have to follow this directory structure, but if you do, your work
-  will span all of the .cpp files here. Keep an eye out for TODOs.
-
-## Call for IDE Profiles Pull Requests
-
-Help your fellow students!
-
-We decided to create Makefiles with cmake to keep this project as platform
-agnostic as possible. Similarly, we omitted IDE profiles in order to we ensure
-that students don't feel pressured to use one IDE or another.
-
-However! I'd love to help people get up and running with their IDEs of choice.
-If you've created a profile for an IDE that you think other students would
-appreciate, we'd love to have you add the requisite profile files and
-instructions to ide_profiles/. For example if you wanted to add a VS Code
-profile, you'd add:
-
-* /ide_profiles/vscode/.vscode
-* /ide_profiles/vscode/README.md
-
-The README should explain what the profile does, how to take advantage of it,
-and how to install it.
-
-Frankly, I've never been involved in a project with multiple IDE profiles
-before. I believe the best way to handle this would be to keep them out of the
-repo root to avoid clutter. My expectation is that most profiles will include
-instructions to copy files to a new location to get picked up by the IDE, but
-that's just a guess.
-
-One last note here: regardless of the IDE used, every submitted project must
-still be compilable with cmake and make./
