@@ -5,7 +5,7 @@
 using CppAD::AD;
 
 size_t N = 15;
-double dt = 0.2;
+double dt = 0.15;
 
 // This value assumes the model presented in the classroom is used.
 //

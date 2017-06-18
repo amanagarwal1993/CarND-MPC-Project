@@ -41,7 +41,7 @@ There can be a lot of experimentation in this regard, but it's best to only appr
 
 Moreover, there is also an inherent latency inside a car's systems. There's a time delay of a few milliseconds between when the throttle/steering input is decided and when the car actually makes that turn/acceleration. We also need to model this into our equations.
 
-After some experimentation, I chose the timestep dt to be 0.2 seconds - which is big enough to accomodate the system's latency described above. Therefore, the number of timesteps becomes 15 (3 seconds / 0.2 seconds). At any given time, we only try to look 3 seconds into the future.
+After some experimentation, I chose the timestep dt to be 0.15 seconds. However, because of the latency, we need to actuate the vehicle based for a future state (after 100ms), not the present state. Therefore, I send the *second* actuator values for steering and throttle to the simulator, and not the present calculated values. This makes sure that after the vehicle has travelled during the 100ms, it will receive appropriate actuator values.
 
 ### Polynomial fitting
 (See main.cpp code)
